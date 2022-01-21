@@ -30,7 +30,7 @@ void Marker::readSNPFile(const char *snpFile, const char *onlyChr, int startPos,
 			 int endPos, bool ignoreAlleles) {
   FILE *outs[2] = { stdout, NULL };
   FILE *in = openRead(snpFile, "SNP", outs);
-
+  cleanUp();
   readMarkers(in, onlyChr, /*type=*/ 1, startPos, endPos, ignoreAlleles);
   fclose(in);
 }

@@ -391,8 +391,22 @@ void Marker::readMarkers(FILE *in, const char *onlyChr, int type, int startPos,
 
   nread = fread(curBuf, sizeof(char), BUF_SIZE, in);
 
+  // reset values
+  _allMarkers = dynarray < Marker * >(600000);
+  _chromNames = dynarray < char * >();
+  _omitMarkers = dynarray < int >();
+  _readOnlyOneChrom = false;
+  _firstStoredMarkerIdx = -1;
+  _numMarkersInFile = 0;
+  _firstMarkerNum = dynarray < int >();
+  _lastMarkerNum = dynarray < int >();
+  _firstHapChunk = dynarray < int >();
+  _lastHapChunk = dynarray < int >();
+  _numHapChunks = 0;
+  _hapWindowEnds = dynarray < int >();
+  _hapWindowMapCenter = dynarray < float >();
 
-  _allMarkers = dynarray < Marker * >(600000);  // clear markers
+
   while (1) {
     // Note: I assume the map positions are in Morgans per the spec of both
     // the Reich lab SNP file format and the spec of the PLINK .map file format

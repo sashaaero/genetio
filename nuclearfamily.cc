@@ -430,7 +430,7 @@ void NuclearFamily::printHapTxt(FILE *out, int chrIdx) {
 	}
 	// TODO: remove at some point
 	if (prevM_OK >= 0) {
-	  uint8_t count = popcount(_phase[m].iv ^ _phase[prevM_OK].iv);
+	  uint8_t count = popcount(_phase[m].iv ^ _phase[prevM_OK].iv); // it was popcount, but...
 	  if (_phase[m].numRecombs != count) {
 	    fprintf(out, " %2d!!!! ", count);
 	  }

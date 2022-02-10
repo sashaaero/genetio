@@ -30,7 +30,6 @@ void Marker::readSNPFile(const char *snpFile, const char *onlyChr, int startPos,
 			 int endPos, bool ignoreAlleles) {
   FILE *outs[2] = { stdout, NULL };
   FILE *in = openRead(snpFile, "SNP", outs);
-
   readMarkers(in, onlyChr, /*type=*/ 1, startPos, endPos, ignoreAlleles);
   fclose(in);
 }
@@ -184,7 +183,7 @@ void Marker::readVCFFile(htsFile *vcfIn, tbx_t *index, hts_itr_t *itr,
 	_firstMarkerNum[chromIdx] = curMarkerNum;
       }
     }
-    
+
     _allMarkers.append(m);
     numMarkersCurChrom++;
     prevMarker = m;
@@ -240,15 +239,13 @@ void Marker::printMapFile(FILE *out) {
   for (int m = 0; m < numMarkers; m++) {
     Marker *cur = _allMarkers[m];
     // Bi-allelic SNPs only.
-    fprintf(out, "%s\t%s\t%1.12f\t%d\n", 
+    fprintf(out, "%s\t%s\t%1.12f\t%d\n",
       cur->getChromName(),
       cur->getName(),
       cur->getMapPos(),
       cur->getPhysPos());
   }
 }
-
-
 
 // Prints the first 5 columns of an IMPUTE2 format .haps file (i.e., SNP
 // information)
@@ -320,7 +317,7 @@ int Marker::readDoubleBuffer(FILE *in, char *&field, char *&curBuf,
   for ( ; bind < nread && !isspace(curBuf[bind]); bind++);
   if (bind == nread) {
     // reached end of curBuf and field is incomplete; copy into
-    // <nextBuf> and then read more into that buffer 
+    // <nextBuf> and then read more into that buffer
     int numCpy = nread - mstart;
     strncpy(nextBuf, field, numCpy);
     nread = numCpy + fread(&nextBuf[numCpy], sizeof(char), BUF_SIZE - numCpy, in);
@@ -337,15 +334,15 @@ int Marker::readDoubleBuffer(FILE *in, char *&field, char *&curBuf,
 
   if (bind >= nread && nread < BUF_SIZE) {
     return -1; // Reached EOF
-  } 
+  }
 
   assert(bind < nread);
 
   // null terminate field by inserting '\0' in curBuf:
-  char c = curBuf[bind];   
+  char c = curBuf[bind];
   curBuf[bind] = '\0';
 
-  // Increment by 1 to get to next character... 
+  // Increment by 1 to get to next character...
   if (c != '\n') {
     bind++;
   }
@@ -363,7 +360,6 @@ void Marker::replaceBuffer(FILE *in, char *&curBuf, char *&nextBuf,
   curBuf = nextBuf;
   nextBuf = tmpBuf;
 }
-
 
 // Read marker/genetic map definition file of the following formats:
 // If type == 1, reads Reich lab format .snp file
@@ -394,7 +390,23 @@ void Marker::readMarkers(FILE *in, const char *onlyChr, int type, int startPos,
   nextBuf = buf2;
 
   nread = fread(curBuf, sizeof(char), BUF_SIZE, in);
-  
+
+  // reset values
+  _allMarkers = dynarray < Marker * >(600000);
+  _chromNames = dynarray < char * >();
+  _omitMarkers = dynarray < int >();
+  _readOnlyOneChrom = false;
+  _firstStoredMarkerIdx = -1;
+  _numMarkersInFile = 0;
+  _firstMarkerNum = dynarray < int >();
+  _lastMarkerNum = dynarray < int >();
+  _firstHapChunk = dynarray < int >();
+  _lastHapChunk = dynarray < int >();
+  _numHapChunks = 0;
+  _hapWindowEnds = dynarray < int >();
+  _hapWindowMapCenter = dynarray < float >();
+
+
   while (1) {
     // Note: I assume the map positions are in Morgans per the spec of both
     // the Reich lab SNP file format and the spec of the PLINK .map file format
@@ -447,7 +459,7 @@ void Marker::readMarkers(FILE *in, const char *onlyChr, int type, int startPos,
 	  exit(1);
 	}
 	alleles[2] = tmpStr[0];
-      } 
+      }
 
       // Check if extra material on the line (i.e. newline check)
       char c = curBuf[bind];
@@ -465,25 +477,25 @@ void Marker::readMarkers(FILE *in, const char *onlyChr, int type, int startPos,
           }
           if (curBuf[bind] != '\n') {
             fprintf(stderr, "ERROR: extra characters on line for marker %s\n", markerName.c_str());
-            exit(1);            
+            exit(1);
           }
-        } 
+        }
         else if (isspace(c) && bind == nread) {
           // Replace entire buffer
-          replaceBuffer(in, curBuf, nextBuf, bind, nread, BUF_SIZE); 
+          replaceBuffer(in, curBuf, nextBuf, bind, nread, BUF_SIZE);
           skipWhitespace(curBuf, bind, nread, BUF_SIZE);
           if (curBuf[bind] != '\n') {
             fprintf(stderr, "ERROR: extra characters on line for marker %s\n", markerName.c_str());
             exit(1);
           }
-        } 
+        }
         else{
           fprintf(stderr, "ERROR: extra characters on line for marker %s\n", markerName.c_str());
           exit(1);
         }
       }
 
-      // Increment so marker name is not blank 
+      // Increment so marker name is not blank
       bind++;
     }
     else if (type == 2 || type == 3) {
@@ -549,22 +561,22 @@ void Marker::readMarkers(FILE *in, const char *onlyChr, int type, int startPos,
           }
           if (curBuf[bind] != '\n') {
             fprintf(stderr, "ERROR: extra characters on line for marker %s\n", markerName.c_str());
-            exit(1);            
+            exit(1);
           }
-        } 
+        }
         else if (isspace(c) && bind == nread) {
           // Replace entire buffer
-          replaceBuffer(in, curBuf, nextBuf, bind, nread, BUF_SIZE); 
+          replaceBuffer(in, curBuf, nextBuf, bind, nread, BUF_SIZE);
           skipWhitespace(curBuf, bind, nread, BUF_SIZE);
           if (curBuf[bind] != '\n') {
             fprintf(stderr, "ERROR: extra characters on line for marker %s\n", markerName.c_str());
             exit(1);
           }
-        } 
+        }
         else{
           fprintf(stderr, "ERROR: extra characters on line for marker %s\n", markerName.c_str());
           exit(1);
-        }        
+        }
       }
       bind++;
     }
@@ -920,7 +932,7 @@ Marker::Marker(const char *markerName, int chromIdx, float mapPos,
 }
 
 // Compute allele frequency stats
-void Marker::setAlleleFreq(int alleleCount, int totalGenoWithData, 
+void Marker::setAlleleFreq(int alleleCount, int totalGenoWithData,
 					bool nonStandardGeno) {
 	if (nonStandardGeno) {
 	   _logAlleleFreq = _logVarAlleleFreq = 1; // illegal log value

@@ -27,11 +27,11 @@
 
 class Marker {
   public:
-//    ~Marker() { // not needed -- only delete when program done: OS will manage
-//      if (_numAlleles)
-//	delete [] _alleles;
-//      delete [] _name;
-//    }
+   ~Marker() { // not needed -- only delete when program done: OS will manage
+     if (_numAlleles)
+      delete [] _alleles;
+     delete [] _name;
+   }
 
     //////////////////////////////////////////////////////////////////
     // public static methods
